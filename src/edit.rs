@@ -11,15 +11,20 @@ use crate::actions::TextInputEdit;
 use crate::actions::apply_text_input_edit;
 use crate::clipboard::Clipboard;
 use crate::text_input_pipeline::TextInputPipeline;
+use bevy::ecs::change_detection::DetectChanges;
 use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::message::MessageReader;
 use bevy::ecs::message::MessageWriter;
 use bevy::ecs::observer::On;
+use bevy::ecs::query::With;
 use bevy::ecs::system::Commands;
+use bevy::ecs::system::Local;
+use bevy::ecs::system::NonSend;
 use bevy::ecs::system::Query;
 use bevy::ecs::system::Res;
 use bevy::ecs::system::ResMut;
+use bevy::ecs::system::Single;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::Key;
 use bevy::input::keyboard::KeyboardInput;
@@ -27,6 +32,7 @@ use bevy::input::mouse::MouseScrollUnit;
 use bevy::input::mouse::MouseWheel;
 use bevy::input_focus::FocusedInput;
 use bevy::input_focus::InputFocus;
+use bevy::log::warn;
 use bevy::math::Rect;
 use bevy::picking::events::Click;
 use bevy::picking::events::Drag;
@@ -38,6 +44,9 @@ use bevy::picking::pointer::PointerButton;
 use bevy::time::Time;
 use bevy::ui::ComputedNode;
 use bevy::ui::UiGlobalTransform;
+use bevy::window::Ime;
+use bevy::window::Window;
+use bevy::winit::WinitWindows;
 use cosmic_text::Action;
 use cosmic_text::BorrowedWithFontSystem;
 use cosmic_text::Change;
@@ -640,5 +649,54 @@ pub fn on_focused_keyboard_input(
                 queue.add(action);
             },
         );
+    }
+}
+
+pub fn listen_ime_events(
+    trigger: On<Ime>,
+    mut text_inputs: Query<&mut TextInputQueue, With<TextInputNode>>,
+    mut global_state: ResMut<TextInputGlobalState>,
+) {
+    let Ok(mut queue) = text_inputs.get_mut(trigger.entity) else {
+        return;
+    };
+
+    let TextInputGlobalState { overwrite_mode, .. } = &mut *global_state;
+
+    if let Ime::Commit { value, .. } = &*trigger {
+        for character in value.chars() {
+            queue.add(TextInputAction::Edit(TextInputEdit::Insert(
+                character,
+                *overwrite_mode,
+            )));
+        }
+    }
+}
+
+pub fn toggle_ime_on_focus(
+    input_focus: Res<InputFocus>,
+    text_inputs: Query<&TextInputNode>,
+    // supporting multiple windows requires detecting
+    // on which window the text input is currently on.
+    // because IME is mostly useful on mobile,
+    // it's ok to only support single window for now.
+    window: Single<Entity, With<Window>>,
+    winit_windows: NonSend<WinitWindows>,
+    mut ime_allowed: Local<bool>,
+) {
+    if input_focus.is_changed() {
+        let is_text_input_focused = input_focus
+            .get()
+            .is_some_and(|focused_entity| text_inputs.get(focused_entity).is_ok());
+
+        if is_text_input_focused != *ime_allowed {
+            let Some(window) = winit_windows.get_window(*window) else {
+                warn!("no window found to toggle IME on");
+                return;
+            };
+
+            *ime_allowed = is_text_input_focused;
+            window.set_ime_allowed(*ime_allowed);
+        }
     }
 }
