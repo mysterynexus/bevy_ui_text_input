@@ -33,9 +33,9 @@ use bevy::ui::{Node, UiSystems};
 use bevy::ui_render::{RenderUiSystems, extract_text_sections};
 use cosmic_text::{Buffer, Change, Edit, Editor, Metrics, Wrap};
 use edit::{
-    cursor_blink_system, mouse_wheel_scroll, on_drag_text_input, on_focused_keyboard_input,
-    on_move_clear_multi_click, on_multi_click_set_selection, on_text_input_pressed,
-    process_text_input_queues,
+    cursor_blink_system, listen_ime_events, mouse_wheel_scroll, on_drag_text_input,
+    on_focused_keyboard_input, on_move_clear_multi_click, on_multi_click_set_selection,
+    on_text_input_pressed, process_text_input_queues, toggle_ime_on_focus,
 };
 use render::{extract_text_input_nodes, extract_text_input_prompts};
 use text_input_pipeline::{
@@ -58,6 +58,7 @@ impl Plugin for TextInputPlugin {
                     remove_dropped_font_atlas_sets_from_text_input_pipeline
                         .before(AssetEventSystems),
                     (
+                        toggle_ime_on_focus,
                         cursor_blink_system,
                         mouse_wheel_scroll,
                         process_text_input_queues,
@@ -141,6 +142,7 @@ fn on_add_textinputnode(mut world: DeferredWorld, context: HookContext) {
         Observer::new(on_multi_click_set_selection),
         Observer::new(on_move_clear_multi_click),
         Observer::new(on_focused_keyboard_input),
+        Observer::new(listen_ime_events),
     ] {
         observer.watch_entity(context.entity);
         world.commands().spawn(observer);
