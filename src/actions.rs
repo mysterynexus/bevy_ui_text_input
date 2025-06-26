@@ -6,7 +6,6 @@ use cosmic_text::Motion;
 use cosmic_text::Selection;
 
 use crate::TextInputFilter;
-use crate::clipboard::ClipboardRead;
 use crate::edit::apply_action;
 use crate::edit::apply_motion;
 use crate::edit::buffer_len;
@@ -24,7 +23,7 @@ pub enum TextInputAction {
     /// Retrieve text from the clipboard and then queue
     Paste,
     /// Paste text from the clipboard
-    PasteDeferred(ClipboardRead),
+    // PasteDeferred(ClipboardRead),
     /// A single edit action
     Edit(TextInputEdit),
 }

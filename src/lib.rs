@@ -1,5 +1,4 @@
 pub mod actions;
-pub mod clipboard;
 pub mod edit;
 pub mod render;
 pub mod text_input_pipeline;
@@ -51,7 +50,6 @@ impl Plugin for TextInputPlugin {
             .add_plugins(bevy::input_focus::InputDispatchPlugin)
             .init_resource::<TextInputGlobalState>()
             .init_resource::<TextInputPipeline>()
-            .init_resource::<clipboard::Clipboard>()
             .add_systems(
                 PostUpdate,
                 (
