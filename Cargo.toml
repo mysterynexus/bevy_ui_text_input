@@ -16,6 +16,9 @@ bevy = { version = "0.17", default-features = false, features = [
     "bevy_input_focus",
     "bevy_picking",
     "bevy_ui_render",
+    "bevy_log",
+    "bevy_window",
+    "bevy_winit",
 ] }
 sys-locale = "0.3.2"
 once_cell = "1.21.3"
