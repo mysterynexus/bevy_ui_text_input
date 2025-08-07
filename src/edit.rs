@@ -37,7 +37,6 @@ use bevy::picking::events::Click;
 use bevy::picking::events::Drag;
 use bevy::picking::events::Move;
 use bevy::picking::events::Pointer;
-use bevy::picking::events::Press;
 use bevy::picking::hover::HoverMap;
 use bevy::picking::pointer::PointerButton;
 use bevy::time::Time;
@@ -156,8 +155,8 @@ pub(crate) fn on_drag_text_input(
     });
 }
 
-pub(crate) fn on_text_input_pressed(
-    trigger: On<Pointer<Press>>,
+pub(crate) fn on_text_input_clicked(
+    mut trigger: On<Pointer<Click>>,
     mut node_query: Query<(
         &ComputedNode,
         &UiGlobalTransform,
@@ -201,6 +200,8 @@ pub(crate) fn on_text_input_pressed(
         x: position.x as i32 + scroll.horizontal as i32,
         y: position.y as i32,
     });
+
+    trigger.propagate(false);
 }
 
 /// Updates the scroll position of scrollable nodes in response to mouse input
@@ -633,22 +634,29 @@ pub fn on_focused_keyboard_input(
 }
 
 pub fn listen_ime_events(
-    trigger: On<Ime>,
+    mut events: MessageReader<Ime>,
     mut text_inputs: Query<&mut TextInputQueue, With<TextInputNode>>,
+    input_focus: Res<InputFocus>,
     mut global_state: ResMut<TextInputGlobalState>,
 ) {
-    let Ok(mut queue) = text_inputs.get_mut(trigger.entity) else {
+    let Some(focused_entity) = input_focus.get() else {
+        return;
+    };
+
+    let Ok(mut queue) = text_inputs.get_mut(focused_entity) else {
         return;
     };
 
     let TextInputGlobalState { overwrite_mode, .. } = &mut *global_state;
 
-    if let Ime::Commit { value, .. } = &*trigger {
-        for character in value.chars() {
-            queue.add(TextInputAction::Edit(TextInputEdit::Insert(
-                character,
-                *overwrite_mode,
-            )));
+    for event in events.read() {
+        if let Ime::Commit { value, .. } = event {
+            for character in value.chars() {
+                queue.add(TextInputAction::Edit(TextInputEdit::Insert(
+                    character,
+                    *overwrite_mode,
+                )));
+            }
         }
     }
 }
