@@ -672,6 +672,18 @@ pub fn toggle_ime_on_focus(
         if is_text_input_focused != *ime_allowed {
             *ime_allowed = is_text_input_focused;
             window.ime_enabled = *ime_allowed;
+
+            // On Android, also try the JNI fallback in case the standard winit
+            // path doesn't work. This provides redundancy for showing/hiding
+            // the soft keyboard.
+            #[cfg(target_os = "android")]
+            {
+                if *ime_allowed {
+                    crate::android_keyboard::show_soft_keyboard();
+                } else {
+                    crate::android_keyboard::hide_soft_keyboard();
+                }
+            }
         }
     }
 }

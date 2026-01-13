@@ -3,6 +3,9 @@ pub mod edit;
 pub mod render;
 pub mod text_input_pipeline;
 
+#[cfg(target_os = "android")]
+pub mod android_keyboard;
+
 use std::collections::VecDeque;
 
 use actions::TextInputAction;
